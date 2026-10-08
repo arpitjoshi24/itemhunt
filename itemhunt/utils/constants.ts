@@ -8,3 +8,5 @@ export const TOTAL_ROUNDS = 5;
 export const ROUND_SECONDS = 60;
 export const COUNTDOWN_SECONDS = 10;
 export const DETECTION_THRESHOLD = 0.55;
+export const DETECT_INTERVAL_MS = 350; // minimum gap between detections
+export const CONFIRM_FRAMES = 3; // frames in a row before we report a find

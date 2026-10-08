@@ -1,34 +1,36 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import {  useRouter } from "next/navigation";
 import { getSocket } from "@/services/socket";
 import { useGameStore } from "@/store/gameStore";
 import { useCamera } from "@/hooks/useCamera";
 import PlayerList from "@/components/lobby/PlayerList";
 import ReadyButton from "@/components/lobby/ReadyButton";
 import Countdown from "@/components/lobby/Countdown";
-
+import { useModelStatus } from "@/hooks/useDetector";
 import type { Player, RoomStatus } from "@/types/game";
 
 type SyncRes = { ok: boolean; roomId?: string; players?: Player[]; status?: RoomStatus };
 
 export default function LobbyPage() {
   const router = useRouter();
-  const { roomId } = useParams<{ roomId: string }>();
+  
 
   const {
-    me,
-    players,
-    status,
-    countdownEndsAt,
-    serverOffset,
-    setRoom,
-    setRoomId,
-    reset,
-  } = useGameStore();
+  me,
+  roomId,
+  players,
+  status,
+  countdownEndsAt,
+  serverOffset,
+  setRoom,
+  setRoomId,
+  reset,
+} = useGameStore();
 
   const { videoRef, status: camStatus, start } = useCamera();
+  const modelStatus = useModelStatus();
   const [copied, setCopied] = useState(false);
 
   // Not in a room (e.g. page refresh)? Go home. Otherwise fetch the current room state.
@@ -58,7 +60,7 @@ export default function LobbyPage() {
   const myPlayer = players.find((p) => p.id === me?.id);
   const myReady = myPlayer?.ready ?? false;
   const cameraOk = camStatus === "ready";
-
+const canReady = cameraOk && modelStatus === "ready";
   function toggleReady() {
     getSocket().emit("player:ready", { ready: !myReady });
   }
@@ -70,14 +72,15 @@ export default function LobbyPage() {
   }
 
   async function copyId() {
-    try {
-      await navigator.clipboard.writeText(roomId);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* ignore */
-    }
+  if (!roomId) return;
+  try {
+    await navigator.clipboard.writeText(roomId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  } catch {
+    /* ignore */
   }
+}
 
   const allReady = players.length > 0 && players.every((p) => p.ready);
   const hint =
@@ -167,16 +170,20 @@ export default function LobbyPage() {
             <PlayerList players={players} meId={me.id} />
 
             <div className="mt-5 space-y-3">
-              <ReadyButton
-                ready={myReady}
-                disabled={!cameraOk}
-                onClick={toggleReady}
-              />
-              {!cameraOk && (
-                <p className="text-center text-xs text-amber-300">
-                  Turn on your camera to get ready.
-                </p>
-              )}
+             <ReadyButton ready={myReady} disabled={!canReady} onClick={toggleReady} />
+             {!cameraOk && (
+  <p className="text-center text-xs text-amber-300">
+    Turn on your camera to get ready.
+  </p>
+)}
+{modelStatus === "loading" && (
+  <p className="text-center text-xs text-slate-400">Loading AI model...</p>
+)}
+{modelStatus === "error" && (
+  <p className="text-center text-xs text-red-400">
+    The AI model failed to load. Refresh the page.
+  </p>
+)}
               <p className="text-center text-sm text-slate-400">{hint}</p>
               <button
                 onClick={leaveRoom}
