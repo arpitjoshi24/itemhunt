@@ -379,7 +379,3 @@ YOLO sometimes confuses similar objects, for example a black wireless mouse is o
 - Deployment: frontend on Vercel, server on Render or Railway
 
 ---
-
-## License
-
-Add a license of your choice here.
